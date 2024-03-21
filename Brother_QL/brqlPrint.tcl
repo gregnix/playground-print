@@ -2,7 +2,9 @@ it
 #!/usr/bin/env tclsh
 
 package require twapi
-# Brother bPAC SDK
+# Brother SDK bPAc 
+#brss, sdk 1.5 sdk 2.0
+
 # Make a label with the P-Touch Editor from Brother, 
 # create a text field there and save it under ../lbx/test1.lbx
 
