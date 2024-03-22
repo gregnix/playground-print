@@ -64,7 +64,8 @@ if {[file tail [info nameofexecutable]] eq "wish.exe"} {
 }
 
 if {0} {
-
+QL 550 with tclsh 64bit 
+(with tclsh 32bit is printout  = 1 and print a label or use QL 560):
   Output:
 label         = F:\tcltk\project\printing\brotherql\lbx\company.lbx
 file exists   = 1
