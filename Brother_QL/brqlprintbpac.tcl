@@ -1,7 +1,7 @@
 #!/usr/bin/env tclsh
 
 package require twapi
-# Version 24.03.2024 1640
+# Version 24.03.2024 2200
 # only Windows
 # both Brother bPAC SDK 32 Bit und 64 Bit install
 # P-Touch Editor from Brother
@@ -147,9 +147,9 @@ proc ::Bpac::brqlPrint {label fieldNames labelfieldNameID expbmp printtext {coun
   # getobject
   set i 0
   foreach lfNID $labelfieldNameID lfN $printtext {
-    lappend result "__foreach-[incr i]" "$lfNID $lfN"
+    lappend result "__foreach-field-[incr i]" "$lfNID $lfN"
     lappend result err_objGetObjectfNID [catch {set objGetObjectfNID [$bpacDoc -call GetObject $lfNID]} res] objGetObjectfNID $res
-    # insert $textone or text from company.lbx
+    # insert $printtext or text from *.lbx
     lappend result err_objnametext [catch {$objGetObjectfNID -call text $lfN } res] objnametext  $res
   }
   # media
@@ -170,7 +170,7 @@ proc ::Bpac::brqlPrint {label fieldNames labelfieldNameID expbmp printtext {coun
   lappend result err_GetTextCount [catch {set objGetTextCount [$bpacDoc -call GetTextCount ]} res] objGetTextCount $res
   set i 0
   foreach LabelfieldName $fieldNames {
-    lappend result "__foreach-[incr i]" $LabelfieldName
+    lappend result "__foreach-gettextindex-[incr i]" $LabelfieldName
     lappend result "LabelfieldName" $LabelfieldName
     lappend result err_GetTextIndex [catch {$bpacDoc -call GetTextIndex $LabelfieldName} res] objGetTextIndex $res
   }
@@ -206,48 +206,63 @@ catch {file mkdir export}
 set logdir [file join $dirname "log"]
 catch {file mkdir $logdir}
 
-# individual vars to lbx label
+# individual dict to lbx label
 # lb62x25f1r.lbx ,field1, textone, fester Rahmen
 # lb62x25f2r.lbx , field1 field2, textone texttwo, fester Rahmen
 # lb62x25f1fg.lbx ,field1, textone, freie Groesse
-if {0} {
-set template lb62x25f2r.lbx
-set fieldNames {textone texttwo}
-set labelfieldNameID {field1 field2}
-set printtext {"text example one" "text example 2"}
+set labelVar [dict create]
+dict set labelVar lb62x25f2r {
+template lb62x25f2r.lbx
+fieldNames {textone texttwo}
+labelfieldNameID {field1 field2}
+printtext {"text example one" "text example 2"}
 }
 
-if {1} {
-set template lb62x25f1r.lbx
-set fieldNames {textone}
-set labelfieldNameID {field1}
-set printtext {"text example one"}
+dict set labelVar lb62x25f1r {
+template lb62x25f1r.lbx
+fieldNames {textone}
+labelfieldNameID {field1}
+printtext {"text example one"}
 }
 
-
-set label [string map {/ \\} [file join $liblbx $template]]
-set expbmp [string map {/ \\} [file join $exportdir [file rootname $template]-${::tcl_platform(pointerSize)}.bmp]]
+# common value for dict
+foreach value [dict keys $labelVar] {
+  dict set labelVar $value label [string map {/ \\} [file join $liblbx [dict get $labelVar $value template]]]
+  dict set labelVar $value expbmp [string map {/ \\} [file join $exportdir [file rootname [dict get $labelVar $value template]]-${::tcl_platform(pointerSize)}.bmp]]
+  dict set labelVar $value print 1
+  dict set labelVar $value count 1
+}
 
 # call the print proc
-set count 1
-set print 0
-set imageview 1
-set result [::Bpac::brqlPrint $label $fieldNames $labelfieldNameID $expbmp $printtext  $count $print]
+# lb62x25f1r lb62x25f2r
+set labelDict [dict get $labelVar lb62x25f2r]
+dict with labelDict {
+ set print 0
+ set result [::Bpac::brqlPrint $label $fieldNames $labelfieldNameID $expbmp $printtext  $count $print]
+}
+set logtxt [file join $logdir log-[file rootname $template]-${::tcl_platform(pointerSize)}.txt] 
 
+#
+set imageview 1
+set textview 1
 # the bmp file
 if {$imageview} {
   exec cmd /c "" $expbmp &
 }
 
+# the log file
+#Output a file in ./log/log-x.txt
+#tcl_platform(pointerSize) 4 -> 32 Bit  8 -> 64 Bit
+::Bpac::writeFile $logtxt [dict get $result prettyresult]
+
+if {$textview} {
+  exec cmd /c "" $logtxt &
+}
 # Outputs
 #Output conole
 puts [dict get $result prettyresult ]
 #puts [dict get $result err_objObjectsget]
 #puts [dict get $result objObjectsget]
-
-#Output a file in ./log/log-x.txt
-#tcl_platform(pointerSize) 4 -> 32 Bit  8 -> 64 Bit
-::Bpac::writeFile [file join $logdir log-[file rootname $template]-${::tcl_platform(pointerSize)}.txt] [dict get $result prettyresult ]
 
 #Output text widget
 if {[file tail [info nameofexecutable]] eq "wish.exe"} {
@@ -255,4 +270,6 @@ if {[file tail [info nameofexecutable]] eq "wish.exe"} {
   .t insert end [dict get $result prettyresult]
   pack .t -expand 1 -fill both
 }
+
+
 
