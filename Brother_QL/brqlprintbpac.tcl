@@ -1,65 +1,97 @@
 #!/usr/bin/env tclsh
 
 package require twapi
-# Version 24.03.2024 0340
-# Brother bPAC SDK
+# Version 24.03.2024 0950
+# only Windows
+# both Brother bPAC SDK 32 Bit und 64 Bit install
+# P-Touch Editor from Brother
 # Make a label with the P-Touch Editor from Brother,
 # create a text field there and save it under ../lbx/company.lbx
+# ../log  and ../export for bmp file
+# Brother QL-550 print only bPAC 32 bit
 
 namespace eval Bpac {
   variable bpoVariable
   variable result
 
   set bpoVariable [dict create]
-  dict set bpoVariable default {
-    bpoDefault 0x0
-    bpoAutoCut 0x1
-    bpoCutPause 0x1
-    bpoCutMark 0x2
-    bpoHalfCut 0x200
-    bpoChainPrint 0x400
-    bpoTailCut 0x800
-    bpoSpecialTape 0x00080000
-    bpoCutAtEnd 0x04000000
-    bpoNoCut 0x10000000
-    bpoMirroring 0x4
-    bpoQuality 0x0010000
-    bpoHighResolution 0x10000000
-    bpoColor 0x8
-    bpoMono 0x10000000
-    bpoContinue 0x40000000
+  dict set bpoVariable PrintOptionConstants {
+    bpoDefault {value 0x0 desc {The current drive settings are adopted}}
+    bpoAutoCut {value 0x1 desc {Autocut is applied.}}
+    bpoCutPause {value 0x1 desc {Pause to cut is applied. Valid only with models not supporting the auto cut function}}
+    bpoCutMark {value 0x2 desc {Cut mark is inserted. Valid only with models not supporting the auto cut function.}}
+    bpoHalfCut {value 0x200 desc {Executes half cut.}}
+    bpoChainPrint {value 0x400 desc {Continuous printing is performed.
+The final label is not cut, but when the next labels are output, the preceding blank is cut in line with the cut option setting.}}
+    bpoTailCut {value 0x800  desc {Whenever a label is output, the trailing end of the form is forcibly cut to leave a leading blank for the next label output.}}
+    bpoSpecialTape {value 0x00080000 desc {No cutting is performed when printing on special tape. Valid only with PT-2430PC.}}
+    bpoCutAtEnd {value 0x04000000 desc {"Cut at end" is performed.}}
+    bpoNoCut {value 0x10000000 desc {No cutting is performed. Valid only with models supporting cut functions.}}
+    bpoMirroring {value 0x4 desc {Executes mirror printing.}}
+    bpoQuality {value 0x0010000 desc {Fine-quality printing is performed.}}
+    bpoHighSpeed {value 0x01000000 desc {High-speed printing is performed.}}
+    bpoHighResolution {value 0x10000000 desc {High-resolution printing is performed}}
+    bpoColor {value 0x8 desc color} {value  desc {Color printing is performed.}}
+    bpoMono {value 0x10000000 desc {Monochrome printing is performed. Valid only with models supporting the color printing function.}}
+    bpoContinue 0x40000000 {value  desc {Combines with printing for the following DoPrint( ) so that it is a single print job. As a result, when the next DoPrints are called up, the front margins are not output.}}
   }
   dict set bpoVariable "Brother QL-550" {
-    bpoAutoCut &H1
-    bpoNoCut &H10000000
+    bpoAutoCut {value &H1 desc {}}
+    bpoNoCut {value &H10000000 desc {}}
   }
   dict set bpoVariable "Brother QL-560" {
-    bpoAutoCut &H1
-    bpoNoCut &H10000000
-    bpoCutAtEnd &H4000000
+    bpoAutoCut {value &H1 desc {}}
+    bpoNoCut {value &H10000000 desc {}}
+    bpoCutAtEnd {value &H4000000 desc {}}
   }
   dict set bpoVariable "ExportType" {
-    bexOpened 0x0
-    bexLbx 0x1
-    bexLbl 0x2
-    bexBmp 0x4
-    bexPAF 0x5
+    bexOpened  {value 0x0 desc {}}
+    bexLbx {value 0x2  desc {}}
+    bexLbl {value 0x2 desc {}}
+    bexBmp {value 0x4 desc {}}
+    bexPAF {value 0x5 desc {}}
+  }
+  dict set bpoVariable "FontEffect" {
+    bfeNoEffects {value 0x0 desc {No effects}}
+    bfeShadowLight {value 0x1 desc {Shadow effect 1}}
+    bfeShadów {value 0x2 desc {Shadow effect 2}}
+    bfeHorizontal {value 0x3 desc {Striping}}
+    bfeOutline {value 0x4 desc {Outline}}
+    bfeSurround {value 0x5 desc {Border}}
+    bfeFrameOut {value 0x6 desc {Framing}}
+    bfeInvertTextColors {value 0x7 desc {Invert text colors}}    
+  }
+  dict set bpoVariable "ObjectAttribute" {
+    boaTextOption {value 0x0 desc {Text option}}
+    boaFontBold {value 0x1 desc {Font bold}}
+    boaFonrEffect {value 0x2 desc {Font effect}}    
+    boaFontItalics {value 0x3 desc {Font italic}}
+    boaFontMaxPoint {value 0x4 desc {Maximum point count}}
+    boaFontName {value 0x5 desc {Font name}}
+    boaFontStrikeout {value 0x6 desc {Strikeout}}
+    boaFontUnderline {value 0x7 desc {Font underline}}
+    boaDateTimeAddSubstrat {value 0x8 desc {Addition-substaction of date and time}}
+    boaClibArtGallery {value 0x9 desc {Clib art category + No}}
+    boaBarcodeProtocol {value 0xa desc {Barcode protocol}}
+  }  
+  dict set bpoVariable "ObjectType" {
+    bobText {value 0x0 desc {Text}}
+    bobBarcode {value 0x1 desc {Barcode}}
+    bobImage {value 0x2 desc {Image}}
+    bobDateTime {value 0x3 desc {Date and time}}
+    bobClipArt {value 0x4 desc {Clipart}}    
+  }
+  dict set bpoVariable "PrintEvent" {
+  bpePrinted {value 0x0 desc {Print end}}
+  bpeOffline {value 0x1 desc {Printer offline}}
+  bpePaused {value 0x2 desc {Pause}}
+  bpeDeleted {value 0x3 desc {Cancel job}}
+  bpeError {value 0x4 desc {Error}}
+  bpeNotFound {value 0x5 desc {Printer not found}}
   }
 }
-set dirname [file dirname [info script]]
-set filename [file tail [info script]]
-set filerootname [file rootname [file tail [info script]]]
-set liblbx [file join $dirname "lbx"]
-set exportdir [file join $dirname "export"]
-catch {file mkdir export}
-set logdir [file join $dirname "log"]
-catch {file mkdir $logdir}
 
-set template company.lbx
-set label [string map {/ \\} [file join $liblbx $template]]
-set expbmp [string map {/ \\} [file join $exportdir [file rootname $template]-${::tcl_platform(pointerSize)}.bmp]]
-
-proc writeFile {filename data} {
+proc ::Bpac::writeFile {filename data} {
   set f [open $filename "w"]
   puts -nonewline $f $data
   close $f
@@ -67,23 +99,21 @@ proc writeFile {filename data} {
 
 proc ::Bpac::pPrintOptionConstants {printerName bpov} {
   variable bpoVariable
-  if {$bpov in [dict keys [dict get $bpoVariable default]]} {
-    puts "ok"
-  } else {
-    puts "error"
-  }
-  if {[dict exists $bpoVariable $printerName $bpov]} {
-    set res [dict get $bpoVariable $printerName $bpov]
+  if {[dict exists $bpoVariable $printerName $bpov value]} {
+    set res [dict get $bpoVariable $printerName $bpov value]
   }  else {
-    set res [dict get $bpoVariable default $bpov]
+    set res [dict get $bpoVariable PrintOptionConstants $bpov value]
   }
   return $res
 }
 
-proc ::Bpac::brqlPrint {label expbmp {textOne "test "} {count 1} {print 1} } {
-  variable result
+proc ::Bpac::brqlPrint {label fieldNames labelfieldNameID expbmp {textOne "test "} {count 1} {print 1} } {
   variable bpoVariable
+  variable result
+  # lappend result construction for log
   set result [list]
+  # tcl vars and arrays
+  lappend result nameofexecutable [info nameofexecutable]  
   lappend result patchlevel [info patchlevel]
   #  lappend result auto_path $::auto_path
   #  lappend result tcl__tm__path [::tcl::tm::path list]
@@ -91,41 +121,52 @@ proc ::Bpac::brqlPrint {label expbmp {textOne "test "} {count 1} {print 1} } {
   lappend result tcl_platform(osVersion) $::tcl_platform(osVersion)
   lappend result tcl_platform(pointerSize) $::tcl_platform(pointerSize)
   lappend result tcl_platform(machine)  $::tcl_platform(machine)
+  # Windows env
   lappend result ::env(PROCESSOR_ARCHITECTURE) $::env(PROCESSOR_ARCHITECTURE)
   lappend result ::env(SESSIONNAME) $::env(SESSIONNAME)
-  lappend result nameofexecutable [info nameofexecutable]
+  lappend result ::env(PATH)_Tcl [lsearch -all -inline  [split $::env(PATH) ";"] *Tcl*]
+  # label
   lappend result label $label
   lappend result {file exists} [file exists $label]
   lappend result expbmp $expbmp
+  # comobjs Document, Printer and Object
   lappend result err_bpacDoc [catch {set bpacDoc [::twapi::comobj bpac.Document]} res] bpacDoc $res
   lappend result err_bpacPrinter [catch {set bpacPrinter [::twapi::comobj bpac.Printer]} res] bpacPrinter $res
   lappend result err_bpacObject [catch {set bpacObject [::twapi::comobj bpac.Object]} res] bpacObject $res
-  #Doc
+  #Document
   lappend result err_objPrinter [catch {set objPrinter [$bpacDoc printer]} res] objPrinter $res
   lappend result err_printerName [catch {set printerName [$objPrinter name]} res] printerName $res
   lappend result err_objObjects [catch {set objObjects [$bpacDoc objects]} res] objObjects $res
-
+  # open label
   lappend result err_bpacopenlabel [catch {$bpacDoc -call open $label} res] bpacopenlabel $res
-
-  set labelobjName "Text2"
-  lappend result "labelobjName" $labelobjName
-  lappend result err_labelobjName [catch {set objGetObject [$bpacDoc -call GetObject $labelobjName]} res] objGetObject $res
-  lappend result err_objnametext [catch {$objGetObject -call text $textOne } res] objnametext $res
-
+  # label attributs
+  lappend result "labelfieldNameID" $labelfieldNameID
+  lappend result err_objGetObjectfNID [catch {set objGetObjectfNID [$bpacDoc -call GetObject $labelfieldNameID]} res] objGetObjectfNID $res
+  
+  lappend result err_objnametext [catch {$objGetObjectfNID -call text } res] objnametext  $res
   lappend result err_GetMediaID [catch {set objMediaID [$bpacDoc -call GetMediaID ]} res] objGetMediaID $res
   lappend result err_objGetMediaName [catch {set objMediaName [$bpacDoc -call GetMediaName ]} res] objGetMediaName $res
 
-  lappend result err_GetText [catch {set objGetText [$bpacDoc -call GetText 1 0,Company  ]} res] objGetText $res
+  # label get text atributtes
+  lappend result err_GetText [catch {set objGetText [$bpacDoc -call GetText 1 0,Company]} res] objGetText $res
+  ## error with GetText:  Parameter error. Offending parameter position 2. Typenkonflikt.
+  ### VARIANT_BOOL bpac::IDocument::GetText (LONG index, ref BSTR text)
+  ### Acquires the text data of the specified line. 
+  ### Returns the line number of the text in the document.
+  ### Arguments:
+  ### index  	Index (0 onwards) of the text line to be acquired
+  ### text  	Pointer to the buffer in which text is to be acquired
+  ###  Returned value: Success or Failure
   lappend result err_GetTextCount [catch {set objGetTextCount [$bpacDoc -call GetTextCount ]} res] objGetTextCount $res
-  foreach LabelfieldName {Company Name nowordfound } {
+  foreach LabelfieldName $fieldNames {
     lappend result "LabelfieldName" $LabelfieldName
     lappend result err_GetTextIndex [catch {$bpacDoc -call GetTextIndex $LabelfieldName} res] objGetTextIndex $res
   }
-  
-  lappend result err_ExportType [catch {set ExportType [dict get $bpoVariable ExportType bexBmp]} res] Exporttype $res
+  # export label as bmp
+  lappend result err_ExportType [catch {set ExportType [dict get $bpoVariable ExportType bexBmp value]} res] Exporttype $res
   lappend result err_expbmp [catch {$bpacDoc -call export $ExportType $expbmp 300 } res] export $res
+  # print start, print out, end and close
   lappend result err_bpoAutoCut [catch {set bpoAutoCut [pPrintOptionConstants $printerName bpoAutoCut]} res] bpoAutoCut $res
-
   lappend result err_startprint [catch {$bpacDoc -call Startprint "" $bpoAutoCut} res] startprint $res
   if {$print} {
     lappend result err_printout [catch {$bpacDoc -call PrintOut 1 0} res] printout $res
@@ -139,21 +180,40 @@ proc ::Bpac::brqlPrint {label expbmp {textOne "test "} {count 1} {print 1} } {
     set l [string length $key]
     if {$l > $longest} {set longest $l}
   }
-  lmap {k v} $result {append prettyresult [format "%-*s = %s" $longest $k $v] "\n"}
+  lmap {k v} $result {append prettyresult [format "%-*s = %s" $longest $k $v ] "\n"}
   return [lappend result prettyresult $prettyresult]
 }
 
-#
+# common vars
+set dirname [file dirname [info script]]
+set filename [file tail [info script]]
+set filerootname [file rootname [file tail [info script]]]
+set liblbx [file join $dirname "lbx"]
+set exportdir [file join $dirname "export"]
+catch {file mkdir export}
+set logdir [file join $dirname "log"]
+catch {file mkdir $logdir}
+
+# individual vars to lbx label
+set template company.lbx
+set fieldNames {Company Name {test for no found}}
+set labelfieldNameID "Text2"
+set label [string map {/ \\} [file join $liblbx $template]]
+set expbmp [string map {/ \\} [file join $exportdir [file rootname $template]-${::tcl_platform(pointerSize)}.bmp]]
+
+# call the print proc
 set count 1
 set print 1
-set result [::Bpac::brqlPrint $label $expbmp "text name\ncompany"  $count $print]
 
+set result [::Bpac::brqlPrint $label $fieldNames $labelfieldNameID $expbmp "text name\ncompany"  $count $print]
+
+# Outputs
 #Output conole
 puts [dict get $result prettyresult ]
 
 #Output a file in ./log/log-x.txt
 #tcl_platform(pointerSize) 4 -> 32 Bit  8 -> 64 Bit
-writeFile [file join $logdir log-${::tcl_platform(pointerSize)}.txt] [dict get $result prettyresult ]
+::Bpac::writeFile [file join $logdir log-${::tcl_platform(pointerSize)}.txt] [dict get $result prettyresult ]
 
 #Output text widget
 if {[file tail [info nameofexecutable]] eq "wish.exe"} {
@@ -162,3 +222,5 @@ if {[file tail [info nameofexecutable]] eq "wish.exe"} {
   pack .t -expand 1 -fill both
 }
 
+#puts $Bpac::bpoVariable
+#puts [dict get $Bpac::bpoVariable default bpoColor desc]
