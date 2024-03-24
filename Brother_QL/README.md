@@ -15,3 +15,5 @@ env(PATH)
 company.lbx is a zip file
 + label.xml
 + prop.xml
+
+[Problem with gettext](gettext.md)
