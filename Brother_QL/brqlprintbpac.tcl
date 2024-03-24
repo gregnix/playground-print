@@ -247,7 +247,7 @@ puts [dict get $result prettyresult ]
 
 #Output a file in ./log/log-x.txt
 #tcl_platform(pointerSize) 4 -> 32 Bit  8 -> 64 Bit
-::Bpac::writeFile [file join $logdir log-${::tcl_platform(pointerSize)}.txt] [dict get $result prettyresult ]
+::Bpac::writeFile [file join $logdir log-[file rootname $template]-${::tcl_platform(pointerSize)}.txt] [dict get $result prettyresult ]
 
 #Output text widget
 if {[file tail [info nameofexecutable]] eq "wish.exe"} {
